@@ -6,10 +6,10 @@
       "memory": 1024
     }
   },
-  "rewrites": [
-    { "source": "/api/(.*)",  "destination": "/api/index" },
-    { "source": "/style.css", "destination": "/frontend/style.css" },
-    { "source": "/app.js",    "destination": "/frontend/app.js" },
-    { "source": "/(.*)",      "destination": "/frontend/index.html" }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index.py" },
+    { "src": "/style.css", "dest": "/frontend/style.css" },
+    { "src": "/app.js",    "dest": "/frontend/app.js" },
+    { "src": "/(.*)",      "dest": "/frontend/index.html" }
   ]
 }
