@@ -9,7 +9,8 @@ Endpoints:
     GET /api/grants                (alias of /api/search)
     GET /api/opportunity/{id}
 
-Serves the frontend from ../frontend at /.
+Serves the frontend from ../frontend at / for LOCAL development only.
+On Vercel, Vercel's CDN serves the frontend and this app only handles /api/*.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+import os
 import re
 import time
 from dataclasses import dataclass, field, asdict
@@ -47,9 +49,6 @@ FRONTEND_DIR = PROJECT_ROOT / "frontend"
 # ---------------------------------------------------------------------------
 # Cybersecurity vocabulary — weighted
 # ---------------------------------------------------------------------------
-# strong = unambiguous cybersecurity concepts
-# medium = clearly security but could appear in adjacent fields
-# weak   = security abbreviations that need a co-occurring term
 STRONG_TERMS: List[str] = [
     "cybersecurity", "cyber security", "cyber-security",
     "information security", "computer security", "network security",
@@ -137,7 +136,6 @@ def _parse_iso_date(value: Any) -> Optional[str]:
     if value is None:
         return None
     if isinstance(value, (int, float)):
-        # epoch millis or seconds
         try:
             ts = float(value)
             if ts > 1e12: ts /= 1000.0
@@ -147,11 +145,9 @@ def _parse_iso_date(value: Any) -> Optional[str]:
     s = str(value).strip()
     if not s:
         return None
-    # Try common formats
     fmts = ("%Y-%m-%d", "%Y/%m/%d", "%d-%m-%Y", "%d/%m/%Y",
             "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%SZ",
             "%b %d, %Y", "%d %b %Y", "%B %d, %Y")
-    # iso with timezone
     try:
         return datetime.fromisoformat(s.replace("Z", "+00:00")).date().isoformat()
     except Exception:
@@ -191,15 +187,6 @@ def _count_terms(text: str, terms: Iterable[str]) -> List[str]:
     return found
 
 def _score(title: str, description: str) -> Tuple[int, List[str], Dict[str, int], bool]:
-    """
-    Weighted scoring:
-        strong:  title +25, desc +6
-        medium:  title +18, desc +4
-        weak:    title +12, desc +2
-    Cap at 100. Requires at least one STRONG term,
-    or one MEDIUM + any other term, or two WEAK terms.
-    Returns: (score, matched_terms, breakdown, is_cyber)
-    """
     t = _normalize(title)
     d = _normalize(description)
 
@@ -370,7 +357,6 @@ USER_AGENT = "CybersecurityFundingTracker/3.0 (+research)"
 async def _get_json(url: str, *, params: Optional[dict] = None,
                     method: str = "GET", json_body: Optional[dict] = None
                     ) -> Tuple[Optional[Any], Optional[str], int]:
-    """Return (payload, error, latency_ms)."""
     t0 = time.perf_counter()
     try:
         async with httpx.AsyncClient(
@@ -549,7 +535,7 @@ CURATED_SEEDS: Dict[str, List[Dict[str, Any]]] = {
 # ---------------------------------------------------------------------------
 # Adapters
 # ---------------------------------------------------------------------------
-AdapterResult = Tuple[List[Dict[str, Any]], Optional[str], int]  # rows, error, latency_ms
+AdapterResult = Tuple[List[Dict[str, Any]], Optional[str], int]
 
 async def _adapter_grants_gov(keyword: str) -> AdapterResult:
     url = "https://api.grants.gov/v1/api/search2"
@@ -736,7 +722,6 @@ async def _adapter_arxiv(keyword: str) -> AdapterResult:
     except Exception as e:
         return [], f"{type(e).__name__}", int((time.perf_counter() - t0) * 1000)
 
-    # Light regex parsing (avoids extra XML dep)
     entries = re.findall(r"<entry>(.*?)</entry>", text, flags=re.S)
     out = []
     for e in entries[:15]:
@@ -793,7 +778,6 @@ class SourceDef:
     adapter: Callable[[str], Any]
 
 SOURCES: List[SourceDef] = [
-    # Real APIs
     SourceDef("World Bank", "Global", "API", "https://projects.worldbank.org/", _adapter_worldbank),
     SourceDef("European Commission", "European Union", "API", "https://ec.europa.eu/", _adapter_ec),
     SourceDef("UKRI", "United Kingdom", "API", "https://www.ukri.org/", _adapter_ukri),
@@ -802,7 +786,6 @@ SOURCES: List[SourceDef] = [
     SourceDef("National Institutes of Health", "United States", "API", "https://www.nih.gov/", _adapter_nih),
     SourceDef("arXiv (cyber preprints)", "International", "API", "https://arxiv.org/", _adapter_arxiv),
 
-    # Official webpage — curated seeds
     SourceDef("Asian Development Bank", "Asia / Pacific", "official webpage", "https://www.adb.org/projects", _curated_source("ADB")),
     SourceDef("JICA", "Japan / Global", "official webpage", "https://www.jica.go.jp/english/", _curated_source("JICA")),
     SourceDef("European Research Council", "European Union", "official webpage", "https://erc.europa.eu/", _curated_source("European Research Council")),
@@ -1058,9 +1041,19 @@ async def grants(keyword: str = Query("cybersecurity"),
     return JSONResponse(await _search_impl(keyword, source, closing_soon))
 
 # ---------------------------------------------------------------------------
-# Static frontend
+# Static frontend — LOCAL DEVELOPMENT ONLY.
+#
+# On Vercel, the environment variable VERCEL=1 is set at runtime. When that is
+# true we skip this entire block, so the catch-all route cannot hijack requests
+# for /style.css, /app.js, or any other frontend asset. Vercel's CDN serves
+# those files directly from the frontend/ folder.
+#
+# When running locally with `uvicorn main:app`, this block activates and the
+# FastAPI app serves the frontend at / exactly as before.
 # ---------------------------------------------------------------------------
-if FRONTEND_DIR.exists():
+_ON_VERCEL = bool(os.environ.get("VERCEL"))
+
+if FRONTEND_DIR.exists() and not _ON_VERCEL:
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
     @app.get("/")
@@ -1076,5 +1069,10 @@ if FRONTEND_DIR.exists():
 else:
     @app.get("/")
     async def root_missing() -> JSONResponse:
-        return JSONResponse({"error": "Frontend directory not found",
-                             "expected": str(FRONTEND_DIR)}, status_code=500)
+        return JSONResponse({
+            "service": "Cybersecurity Research & Funding Tracker API",
+            "status": "ok",
+            "docs": "/api/health",
+            "sources": "/api/sources",
+            "search": "/api/search?keyword=cybersecurity",
+        })
