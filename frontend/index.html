@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark light" />
+<title>Cybersecurity Research &amp; Funding Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <button class="icon-btn hamburger" id="hamburger" aria-label="Open navigation">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+
+    <a href="#/dashboard" class="brand" aria-label="Home">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-title">Cybersecurity Research</span>
+        <span class="brand-sub">&amp; Funding Tracker</span>
+      </div>
+    </a>
+
+    <nav class="topnav" id="topnav">
+      <a href="#/dashboard" data-route="dashboard">Dashboard</a>
+      <a href="#/opportunities" data-route="opportunities">Opportunities</a>
+      <a href="#/sources" data-route="sources">Sources</a>
+      <a href="#/saved" data-route="saved">Saved</a>
+      <a href="#/research" data-route="research">Research</a>
+      <a href="#/phd" data-route="phd">PhD</a>
+      <a href="#/tasks" data-route="tasks">Tasks</a>
+      <a href="#/settings" data-route="settings">Settings</a>
+    </nav>
+
+    <div class="topbar-right">
+      <button class="icon-btn" id="kbd-hint" title="Press / or ⌘K to search">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </button>
+      <span class="status-pill" id="api-status"><span class="dot"></span>checking…</span>
+    </div>
+  </div>
+</header>
+
+<main id="app" class="app-shell">
+
+  <!-- ================= DASHBOARD ================= -->
+  <section class="view" id="view-dashboard">
+    <div class="hero">
+      <div class="hero-text">
+        <span class="eyebrow">Cybersecurity Funding Intelligence</span>
+        <h1>Discover cybersecurity research, grants and international collaboration opportunities.</h1>
+        <p class="muted">Aggregated from official funding bodies and research programmes worldwide, filtered strictly for cybersecurity relevance.</p>
+      </div>
+      <form class="searchbar" id="dash-search-form" autocomplete="off">
+        <span class="search-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </span>
+        <input id="dash-search-input" type="text" placeholder="Search cybersecurity opportunities…" />
+        <button type="submit">Search</button>
+      </form>
+    </div>
+
+    <div class="stats" id="stats-grid">
+      <div class="stat"><div class="stat-label">Sources monitored</div><div class="stat-value" id="stat-sources">—</div><div class="stat-sub" id="stat-sources-sub">—</div></div>
+      <div class="stat"><div class="stat-label">Cybersecurity opportunities</div><div class="stat-value" id="stat-opps">—</div><div class="stat-sub" id="stat-opps-sub">live results</div></div>
+      <div class="stat"><div class="stat-label">Open opportunities</div><div class="stat-value" id="stat-open">—</div><div class="stat-sub">accepting applications</div></div>
+      <div class="stat"><div class="stat-label">Closing within 30 days</div><div class="stat-value" id="stat-deadlines">—</div><div class="stat-sub">upcoming deadlines</div></div>
+    </div>
+
+    <div class="dash-grid">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Live Opportunities</h2>
+          <div class="panel-actions">
+            <button class="ghost-btn" id="dash-closing-btn">Closing soon</button>
+            <button class="ghost-btn" id="refresh-btn">Refresh</button>
+          </div>
+        </div>
+        <div id="live-opps" class="card-grid">
+          <div class="skeleton card"></div><div class="skeleton card"></div><div class="skeleton card"></div>
+        </div>
+      </div>
+
+      <aside class="panel">
+        <div class="panel-head"><h2>Source Health</h2></div>
+        <div id="source-status-list" class="source-status">
+          <div class="skeleton row"></div><div class="skeleton row"></div><div class="skeleton row"></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ================= OPPORTUNITIES ================= -->
+  <section class="view hidden" id="view-opportunities">
+    <div class="view-head">
+      <div>
+        <h1>Opportunities</h1>
+        <p class="muted">Strictly cybersecurity-relevant funding, grants, fellowships and collaborations.</p>
+      </div>
+      <form class="searchbar compact" id="opp-search-form" autocomplete="off">
+        <input id="opp-search-input" type="text" placeholder="Search cybersecurity opportunities…" />
+        <button type="submit">Search</button>
+      </form>
+    </div>
+
+    <div class="layout-with-sidebar">
+      <aside class="sidebar" id="filter-sidebar">
+        <div class="sidebar-head">
+          <h3>Filters</h3>
+          <button class="ghost-btn" id="clear-filters">Clear</button>
+        </div>
+
+        <div class="filter-group">
+          <h4>Research area</h4>
+          <label><input type="checkbox" data-filter="area" value="Zero Trust"> Zero Trust</label>
+          <label><input type="checkbox" data-filter="area" value="IAM"> IAM</label>
+          <label><input type="checkbox" data-filter="area" value="Cloud Security"> Cloud Security</label>
+          <label><input type="checkbox" data-filter="area" value="Network Security"> Network Security</label>
+          <label><input type="checkbox" data-filter="area" value="AI Security"> AI Security</label>
+          <label><input type="checkbox" data-filter="area" value="Blockchain Security"> Blockchain Security</label>
+          <label><input type="checkbox" data-filter="area" value="Digital Forensics"> Digital Forensics</label>
+          <label><input type="checkbox" data-filter="area" value="SOC"> SOC / Threat Detection</label>
+          <label><input type="checkbox" data-filter="area" value="Critical Infrastructure"> Critical Infrastructure</label>
+          <label><input type="checkbox" data-filter="area" value="Cyber Resilience"> Cyber Resilience</label>
+          <label><input type="checkbox" data-filter="area" value="Cybersecurity Education"> Cybersecurity Education</label>
+        </div>
+
+        <div class="filter-group">
+          <h4>Funding type</h4>
+          <label><input type="checkbox" data-filter="type" value="Research Grant"> Research Grant</label>
+          <label><input type="checkbox" data-filter="type" value="PhD / Doctoral"> PhD</label>
+          <label><input type="checkbox" data-filter="type" value="Fellowship / Scholarship"> Fellowship</label>
+          <label><input type="checkbox" data-filter="type" value="International Joint Research"> Joint Research</label>
+          <label><input type="checkbox" data-filter="type" value="Development Project"> Development Project</label>
+          <label><input type="checkbox" data-filter="type" value="Technical Assistance"> Technical Assistance</label>
+          <label><input type="checkbox" data-filter="type" value="Capacity Building"> Capacity Building</label>
+        </div>
+
+        <div class="filter-group">
+          <h4>Eligibility</h4>
+          <label><input type="checkbox" data-filter="elig" value="Bhutan"> Bhutan</label>
+          <label><input type="checkbox" data-filter="elig" value="Developing-country"> Developing Countries</label>
+          <label><input type="checkbox" data-filter="elig" value="International applicants"> International Applicants</label>
+          <label><input type="checkbox" data-filter="elig" value="Potentially relevant"> Requires International Partner</label>
+        </div>
+
+        <div class="filter-group">
+          <h4>Status</h4>
+          <label><input type="checkbox" data-filter="status" value="Open"> Open</label>
+          <label><input type="checkbox" data-filter="status" value="Closing Soon"> Closing Soon</label>
+        </div>
+      </aside>
+
+      <div class="content-area">
+        <div class="toolbar">
+          <div class="result-meta" id="result-meta">Ready.</div>
+          <div class="toolbar-controls">
+            <select id="source-select" class="select">
+              <option value="">All sources</option>
+            </select>
+            <select id="sort-select" class="select">
+              <option value="relevance">Sort: Relevance</option>
+              <option value="deadline">Sort: Deadline</option>
+              <option value="source">Sort: Source</option>
+              <option value="title">Sort: Title</option>
+            </select>
+          </div>
+        </div>
+        <div id="opp-list" class="card-grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SOURCES ================= -->
+  <section class="view hidden" id="view-sources">
+    <div class="view-head">
+      <div>
+        <h1>Sources</h1>
+        <p class="muted">Every funding body monitored. Only official sources are used.</p>
+      </div>
+    </div>
+    <div id="sources-list" class="card-grid"></div>
+  </section>
+
+  <!-- ================= SAVED ================= -->
+  <section class="view hidden" id="view-saved">
+    <div class="view-head">
+      <div><h1>Saved Opportunities</h1><p class="muted">Your shortlist — stored locally in this browser.</p></div>
+    </div>
+    <div id="saved-list" class="card-grid"></div>
+  </section>
+
+  <!-- ================= RESEARCH ================= -->
+  <section class="view hidden" id="view-research">
+    <div class="view-head">
+      <div><h1>Research Projects</h1><p class="muted">Track your own research portfolio.</p></div>
+      <button class="primary-btn" id="add-project">+ Add project</button>
+    </div>
+    <div id="projects-list" class="stack"></div>
+  </section>
+
+  <!-- ================= PHD ================= -->
+  <section class="view hidden" id="view-phd">
+    <div class="view-head">
+      <div><h1>PhD Tracker</h1><p class="muted">PhD opportunities, supervisors and application status.</p></div>
+      <button class="primary-btn" id="add-phd">+ Add PhD</button>
+    </div>
+    <div id="phd-list" class="stack"></div>
+  </section>
+
+  <!-- ================= TASKS ================= -->
+  <section class="view hidden" id="view-tasks">
+    <div class="view-head">
+      <div><h1>Tasks &amp; Deadlines</h1><p class="muted">Proposals, EOI, supervisor contacts, follow-ups.</p></div>
+      <button class="primary-btn" id="add-task">+ Add task</button>
+    </div>
+    <div id="tasks-list" class="stack"></div>
+  </section>
+
+  <!-- ================= SETTINGS ================= -->
+  <section class="view hidden" id="view-settings">
+    <div class="view-head"><div><h1>Settings</h1><p class="muted">Preferences and local data.</p></div></div>
+    <div class="panel">
+      <h3>Local storage</h3>
+      <p class="muted">Saved opportunities, research projects, PhD entries and tasks are stored in your browser only. A future release will sync to PostgreSQL/Supabase.</p>
+      <button class="danger-btn" id="wipe-local">Clear all local data</button>
+    </div>
+  </section>
+</main>
+
+<!-- Filter FAB + backdrop (mobile) -->
+<div class="filter-backdrop" id="filter-backdrop"></div>
+<button class="filter-fab" id="filter-fab">
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+  <span>Filters</span>
+</button>
+
+<!-- Detail drawer -->
+<aside class="drawer" id="detail-drawer" aria-hidden="true">
+  <div class="drawer-head">
+    <div>
+      <span class="eyebrow" id="detail-source">Source</span>
+      <h2 id="detail-title">Title</h2>
+    </div>
+    <button class="icon-btn" id="detail-close" aria-label="Close">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="drawer-body" id="detail-body"></div>
+  <div class="drawer-foot">
+    <a class="primary-btn" id="detail-link" target="_blank" rel="noopener">Open official source</a>
+    <button class="ghost-btn" id="detail-save">Save</button>
+  </div>
+</aside>
+<div class="drawer-backdrop" id="drawer-backdrop"></div>
+
+<!-- Generic modal -->
+<div class="modal" id="modal">
+  <div class="modal-card">
+    <div class="modal-head"><h3 id="modal-title">Edit</h3><button class="icon-btn" id="modal-close" aria-label="Close">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button></div>
+    <div id="modal-body" class="modal-body"></div>
+    <div class="modal-foot">
+      <button class="ghost-btn" id="modal-cancel">Cancel</button>
+      <button class="primary-btn" id="modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
