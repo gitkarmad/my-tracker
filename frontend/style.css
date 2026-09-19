@@ -642,3 +642,108 @@ img,svg{display:block;max-width:100%}
   .toast{left:12px;right:12px;transform:translateY(20px);max-width:none}
   .toast.show{transform:translateY(0)}
 }
+/* ============================================================
+   v3.3 — Overflow & truncation fixes
+   Root cause: flex/grid children default to min-width:auto, so
+   long unbreakable content (URLs, long words, long badges) pushes
+   past the container. Setting min-width:0 on the flex/grid
+   children lets them shrink and wrap correctly.
+   ============================================================ */
+
+/* --- Grid items must be allowed to shrink --- */
+.card,
+.stat,
+.panel,
+.row-card {
+  min-width: 0;
+}
+
+/* --- Flex children in cards must be allowed to shrink --- */
+.card .card-top,
+.card .meta,
+.card .actions,
+.card h3.title,
+.card p.desc {
+  min-width: 0;
+}
+
+/* --- The two-column dashboard grid needs to not overflow when
+       the right rail is at its minimum width --- */
+.dash-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+}
+
+.layout-with-sidebar {
+  grid-template-columns: minmax(0, var(--sidebar-w)) minmax(0, 1fr);
+}
+
+/* --- Truncate long source names cleanly with ellipsis --- */
+.card .src {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Source Health rows: keep the count column from being
+       pushed under the ellipsis; give the name column a floor --- */
+.source-status .name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.source-status .name span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.source-status .count {
+  flex: 0 0 auto;
+  padding-left: 10px;
+}
+
+/* --- Long descriptions should clamp to three lines instead of
+       expanding the card indefinitely --- */
+.card p.desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.5;
+}
+
+/* --- "Matched:" badges can contain long comma-separated terms;
+       let them wrap instead of forcing a wider-than-card pill --- */
+.card .meta .badge {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+/* --- Also allow the badge row itself to break words --- */
+.card .meta {
+  overflow-wrap: anywhere;
+}
+
+/* --- The action button row: don't let three buttons force overflow --- */
+.card .actions {
+  flex-wrap: wrap;
+}
+.card .actions a,
+.card .actions button {
+  flex: 1 1 100px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Optional: soften the "Live Opportunities" panel so its cards
+       don't feel crammed when the right rail is wide --- */
+@media (max-width: 1400px) {
+  .dash-grid {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+}
